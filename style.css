@@ -1,0 +1,9 @@
+.input-box {
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-bottom: 200px;
+    outline: none;
+}
+.suggest-item.cur {
+	color: #FFF;
+}
