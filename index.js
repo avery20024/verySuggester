@@ -1,10 +1,11 @@
 // 調用插件
 $('#input-box').verySuggester({
-	pivotType: 'bottom',
 	width: 250,
-	themeColor: 'purple',
+	themeColor: '#28a9e0',
     searchList: ['qq.com', '163.com', 'gmail.com', 'sina.com', 'gmailbox.com']
 });
 $('#input-box2').verySuggester({
-    searchList: ['qq.com', '163.com', 'gmail.com', 'sina.com', 'qq123.com']
+  pivotType: 'top',
+  additionalClass: 'mobile-suggester',
+  searchList: ['qq.com', '163.com', 'gmail.com', 'sina.com', 'qq123.com']
 });

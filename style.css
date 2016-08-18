@@ -4,6 +4,7 @@
     margin-bottom: 200px;
     outline: none;
 }
-.suggest-item.cur {
-	color: #FFF;
+.mobile-suggester .suggest-item {
+    font-size: 16px;
+    line-height: 35px;
 }

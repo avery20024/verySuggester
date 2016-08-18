@@ -6,7 +6,7 @@
  * Copyright (c) 2016 Avery Wu
  * Released under the MIT license
  *
- * Last Modified: 2016-08-08
+ * Last Modified: 2016-08-18
  */
 
 
@@ -19,12 +19,11 @@
         var configs = $.extend({
           width: $(this).outerWidth(),
           distance: 5,
+          additionalClass: '',
           pivotType: 'bottom',
           searchSymbol: '@',
-          wrapClass: 'suggest-wrap',
-          listClass: 'suggest-list',
-          itemClass: 'suggest-item',
-          themeColor: '#26a4d8',
+          fontColor: '#FFF',
+          themeColor: '#6D6D6D',
           searchList: ['hotmail.com', 'gmail.com', 'yahoo.com.tw']
         }, customConfig);
 
@@ -42,14 +41,11 @@
         $(this).focus( function() {
           var box = $(this).siblings('.suggest-box');
 
-          if(box.find('.' + configs.listClass).children().length > 0)  box.show();
+          if(box.find('.suggest-list').children().length > 0)  box.show();
         });
 
         $(this).blur( function() {
-          var hideBox = setTimeout(function() {
-            
-            $(this).siblings('.suggest-box').fadeOut(150);
-          }.bind(this), 1000);
+          $(this).siblings('.suggest-box').delay().stop().fadeOut(150);
         });
 
       });
@@ -59,53 +55,58 @@
       var inputDom = $(this),
           configs = inputDom.data('verySuggester'),
           box,
-          arrow,
-          boxPosition = {},
-          arrowPosition = {};
+          boxSetting = {},
+          listSetting = {},
+          arrowSetting = {};
 
       inputDom
-        .wrap('<div class="' + configs.wrapClass + '"></div>')
-        .after('<div class="suggest-box"><div class="suggest-arrow"></div><div class="' + configs.listClass + '"></div></div>');
+        .wrap('<div class="suggest-wrap"></div>')
+        .after('<div class="suggest-box"><div class="suggest-arrow"></div><div class="suggest-list"></div></div>');
 
       box = inputDom.siblings('.suggest-box');
-      arrow = box.find('.suggest-arrow');
 
-      if(configs.pivotType === 'bottom') {
-        boxPosition = {
-          top: parseInt(inputDom.css('margin-top')) + inputDom.outerHeight() + configs.distance,
-          bottom: 'auto',
-          left: parseInt(inputDom.css('margin-left'))
-        }
-      } else {
-        boxPosition = {
-          top: 'auto',
-          bottom: parseInt(inputDom.css('margin-bottom')) + inputDom.outerHeight() + configs.distance,
-          left: parseInt(inputDom.css('margin-left'))
-        }
+      if(configs.additionalClass !== '') {
+        box.addClass(configs.additionalClass);
       }
 
+      if(configs.pivotType.toLowerCase() === 'bottom') {
+        boxSetting = {
+          'top': parseInt(inputDom.css('margin-top')) + inputDom.outerHeight() + configs.distance,
+        }
+        listSetting = {
+          'top': '10px',
+        }
+        arrowSetting = {
+          'top': configs.distance * -2,
+          'border-bottom-color': configs.themeColor
+        }
+      } else if(configs.pivotType.toLowerCase() === 'top') {
+        boxSetting = {
+          'top': parseInt(inputDom.css('margin-top')) - configs.distance
+        }
+        listSetting = {
+          'top': 'auto',
+          'bottom': '10px'
+        }
+        arrowSetting = {
+          'top': 'auto',
+          'bottom': '-10px',
+          'border-top-color': configs.themeColor
+        }
+      }
+      boxSetting.left = parseInt(inputDom.css('margin-left'));
+
       box
-        .css( boxPosition )
-        .find('.' + configs.listClass)
+        .css( boxSetting )
+        .find('.suggest-list')
+          .css( listSetting )
           .css({
             'width'       : parseInt(configs.width),
             'border-color': configs.themeColor
           })
-          .data('item', configs.searchList)
-          .parent('.' + configs.wrapClass)
-            .addClass(configs.pivotType + '-box');
-
-      if(configs.pivotType === 'bottom') {
-        arrowPosition = {
-          'border-bottom-color': inputDom.data('verySuggester').themeColor
-        }
-      } else {
-        arrowPosition = {
-          'border-top-color': inputDom.data('verySuggester').themeColor
-        }
-      }
-      arrow.css( arrowPosition );
-
+        .end()
+        .find('.suggest-arrow')
+          .css( arrowSetting );
     },
 
     checkSymbol: function(configs) {
@@ -131,16 +132,16 @@
       if( inputDom.val().indexOf(configs.searchSymbol) === -1 ||
           inputDom.val().slice(0, $(this).val().indexOf(configs.searchSymbol)) === ''
         ) {
-          box.hide().find('.' + configs.listClass).html('');
+          box.hide().find('.suggest-list').html('');
           return;
       }
 
       // 方向鍵移動focus項目
       if(event.which === 38 || event.which === 40) { // ↑ ↓
-        methods.moveThroughItem.call(this, event.which, box.find('.' + configs.listClass));
+        methods.moveThroughItem.call(this, event.which, box.find('.suggest-list'));
         return;
       } else if(event.which === 13) { // enter
-        if(box.find('.' + configs.listClass).find('.cur').length === 0) return;
+        if(box.find('.suggest-list').find('.cur').length === 0) return;
         methods.selectItem(box.find('.cur'), inputDom);
         return;
       }
@@ -151,7 +152,7 @@
       for(var i = 0; i < configs.searchList.length; i++) {
         if( configs.searchList[i].indexOf( firstPart ) !== -1 ) {
           listItem.push(
-            '<div class="' + configs.itemClass + '" data-idx="' + listItem.length + '">' +
+            '<div class="suggest-item" data-idx="' + listItem.length + '">' +
               '<span class="suggest-retain">' + secondPart + '</span>' +
               '<span class="suggest-domain">' + configs.searchList[i] + '</span>' +
             '</div>'
@@ -160,7 +161,7 @@
       }
 
       if(listItem.length > 0) {
-        var list = box.find('.' + configs.listClass),
+        var list = box.find('.suggest-list'),
             arrow = box.find('.suggest-arrow'),
             max = 0;
 
@@ -173,19 +174,22 @@
 
         // 事件
         list.children().hover(function() {
-          $(this).css({ 'background-color' : inputDom.data('verySuggester').themeColor });
+          $(this).addClass('cur').siblings().removeClass('cur');
+          methods.updateChosenStyle(list, configs);
         }, function() {
-          $(this).css({ 'background-color' : 'initial' , color: 'initial'});
+          $(this).siblings().add($(this)).removeClass('cur');
+          methods.updateChosenStyle(list, configs);
         });
 
-        box.find('.' + configs.itemClass).click(function() {
-          methods.selectItem($(this), inputDom);
-        });
-
-        box.show();
+        box
+          .find('.suggest-item')
+            .click(function() {
+              methods.selectItem($(this), inputDom);
+            })
+          .end().show();
 
       } else {
-        box.hide().find('.' + configs.listClass).html('');
+        box.hide().find('.suggest-list').html('');
       }
     },
 
@@ -207,17 +211,13 @@
         case 38:
           resultIdx = (curItem) ? curItem - 1 : list.children().length-1;
           break;
-        default:  break;
+        default:
+          break;
       }
 
-      // 模擬cur樣式效果
-      list
-        .children()
-          .css({ 'background-color' : 'initial' })
-          .removeClass('cur')
-        .eq(resultIdx)
-          .css({ 'background-color' : configs.themeColor})
-          .addClass('cur');
+      // 切換cur
+      list.children().removeClass('cur').eq(resultIdx).addClass('cur');
+      methods.updateChosenStyle(list, configs);
     },
 
     // 點選項目
@@ -226,9 +226,19 @@
 
       dom.val(self.text());
       // reset
-      dom.siblings('.suggest-box').find('.' + configs.listClass).html('').end().hide();
-    }
+      dom.siblings('.suggest-box').find('.suggest-list').html('').end().hide();
+    },
 
+    updateChosenStyle: function(_list, configs) {
+      _list
+        .children()
+          .prop('style', '')
+        .filter('.cur')
+          .css({
+            'background': configs.themeColor,
+            'color'     : configs.fontColor
+          });
+    }
   };
 
   $.fn.verySuggester = function( method ) {

@@ -23,7 +23,6 @@
 .suggest-arrow {
     position: absolute;
     left: 15px;
-    top: -10px;
     border: 10px solid #26a4d8;
     border-color: transparent;
 }
