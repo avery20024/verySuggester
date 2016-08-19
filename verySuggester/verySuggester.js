@@ -6,7 +6,7 @@
  * Copyright (c) 2016 Avery Wu
  * Released under the MIT license
  *
- * Last Modified: 2016-08-18
+ * Last Modified: 2016-08-19
  */
 
 
@@ -24,6 +24,7 @@
           searchSymbol: '@',
           fontColor: '#FFF',
           themeColor: '#6D6D6D',
+          limitItem: 0,
           searchList: ['hotmail.com', 'gmail.com', 'yahoo.com.tw']
         }, customConfig);
 
@@ -187,6 +188,13 @@
               methods.selectItem($(this), inputDom);
             })
           .end().show();
+
+        if(configs.limitItem !== 0) {
+          list.css({
+            'max-height': (list.children().outerHeight() * configs.limitItem) + 3,
+            'overflow-y': 'auto'
+          });
+        }
 
       } else {
         box.hide().find('.suggest-list').html('');
