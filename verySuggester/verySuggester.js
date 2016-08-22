@@ -6,7 +6,7 @@
  * Copyright (c) 2016 Avery Wu
  * Released under the MIT license
  *
- * Last Modified: 2016-08-19
+ * Last Modified: 2016-08-21
  */
 
 
@@ -14,8 +14,6 @@
 
   var methods = {
     init: function(customConfig) {
-      return this.each(function(eachRound) {
-
         var configs = $.extend({
           width: $(this).outerWidth(),
           distance: 5,
@@ -35,21 +33,19 @@
         methods.makeListAndSetLocation.call(this);
 
         // 事件綁定
-        $(this).keydown(function(e) {
-          if(e.which === 40 || e.which === 38 || e.which === 13) e.preventDefault();
-        });
-        $(this).keyup( methods.handleKeyup );
-        $(this).focus( function() {
-          var box = $(this).siblings('.suggest-box');
+        $(this)
+          .keydown(function(e) {
+            if(e.which === 40 || e.which === 38 || e.which === 13) e.preventDefault();
+          })
+          .keyup( methods.handleKeyup )
+          .focus( function() {
+            var box = $(this).siblings('.suggest-box');
 
-          if(box.find('.suggest-list').children().length > 0)  box.show();
-        });
-
-        $(this).blur( function() {
-          $(this).siblings('.suggest-box').delay().stop().fadeOut(150);
-        });
-
-      });
+            if(box.find('.suggest-list').html() !== '')  box.show();
+          })
+          .blur( function() {
+            $(this).siblings('.suggest-box').delay().stop().fadeOut(150);
+          });
     },
 
     makeListAndSetLocation: function() {
@@ -127,14 +123,14 @@
           configs = inputDom.data('verySuggester'),
           inputValue = inputDom.val(),
           box = inputDom.siblings('.suggest-box'),
+          list = box.find('.suggest-list'),
           listItem = [];
 
       // 擋掉沒有必要產生清單的狀況
-      if( inputDom.val().indexOf(configs.searchSymbol) === -1 ||
-          inputDom.val().slice(0, $(this).val().indexOf(configs.searchSymbol)) === ''
-        ) {
-          box.hide().find('.suggest-list').html('');
-          return;
+      if (inputDom.val().indexOf(configs.searchSymbol) === -1 ||
+          inputDom.val().slice(0, $(this).val().indexOf(configs.searchSymbol)) === '') {
+        box.hide();
+        return;
       }
 
       // 方向鍵移動focus項目
@@ -147,6 +143,7 @@
         return;
       }
 
+      // 組清單
       var firstPart = inputValue.slice( inputValue.indexOf(configs.searchSymbol) );
       var secondPart = inputValue.slice( 0, inputValue.indexOf(configs.searchSymbol) );
 
@@ -154,26 +151,27 @@
         if( configs.searchList[i].indexOf( firstPart ) !== -1 ) {
           listItem.push(
             '<div class="suggest-item" data-idx="' + listItem.length + '">' +
-              '<span class="suggest-retain">' + secondPart + '</span>' +
-              '<span class="suggest-domain">' + configs.searchList[i] + '</span>' +
+            '<span class="suggest-retain">' + secondPart + '</span>' +
+            '<span class="suggest-domain">' + configs.searchList[i] + '</span>' +
             '</div>'
           );
         }
       }
 
       if(listItem.length > 0) {
-        var list = box.find('.suggest-list'),
-            arrow = box.find('.suggest-arrow'),
+        var arrow = box.find('.suggest-arrow'),
             max = 0;
 
         list
           .html( listItem.join('') )
-          .find('.suggest-domain')
-            .each(function(idx, item) { if($(item).width() > max)  max = $(item).width(); })
-            .siblings('.suggest-retain')
-              .css('max-width', 'calc(100% - ' + (max+2) + 'px)');
+          .promise().done(function() {
+            list.find('.suggest-domain')
+              .each(function(idx, item) { if($(item).outerWidth() > max)  max = $(item).outerWidth();});
+              console.log(max, list.find('.suggest-item').width()-max);
+            list.find('.suggest-retain').css('max-width', list.find('.suggest-item').width()-max);
+          });
 
-        // 事件
+        // item當前效果
         list.children().hover(function() {
           $(this).addClass('cur').siblings().removeClass('cur');
           methods.updateChosenStyle(list, configs);
@@ -182,13 +180,6 @@
           methods.updateChosenStyle(list, configs);
         });
 
-        box
-          .find('.suggest-item')
-            .click(function() {
-              methods.selectItem($(this), inputDom);
-            })
-          .end().show();
-
         if(configs.limitItem !== 0) {
           list.css({
             'max-height': (list.children().outerHeight() * configs.limitItem) + 3,
@@ -196,8 +187,15 @@
           });
         }
 
+        box
+          .find('.suggest-item')
+            .click(function() {
+              methods.selectItem($(this), inputDom);
+            })
+          .end().show();
+
       } else {
-        box.hide().find('.suggest-list').html('');
+        box.hide().find(list).html('');
       }
     },
 
@@ -250,6 +248,7 @@
   };
 
   $.fn.verySuggester = function( method ) {
+    return this.each(function() {
       if( methods[method] ) {
         return methods[ method ].apply( this, Array.prototype.slice.call(arguments, 1) );
       } else if( !method || typeof method === 'object' ) {
@@ -257,6 +256,7 @@
       } else {
         $.error('Method ' + method + ' does not exist on jQuery.tooltip');
       }
+    });
   };
 
 })(jQuery);
