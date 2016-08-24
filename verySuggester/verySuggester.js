@@ -6,7 +6,7 @@
  * Copyright (c) 2016 Avery Wu
  * Released under the MIT license
  *
- * Last Modified: 2016-08-19
+ * Last Modified: 2016-08-24
  */
 
 
@@ -14,9 +14,10 @@
 
   var methods = {
     init: function(customConfig) {
-      return this.each(function(eachRound) {
+      // 防止插件二次綁定
+      if($(this).data('verySuggester')) return false;
 
-        var configs = $.extend({
+      var configs = $.extend({
           width: $(this).outerWidth(),
           distance: 5,
           additionalClass: '',
@@ -29,27 +30,19 @@
         }, customConfig);
 
         // symble防呆，並記錄config
-        $(this).data( 'verySuggester', methods.checkSymbol(configs) );
-
+        $(this).data('verySuggester', methods.checkSymbol(configs));
         // 塞入標籤及設定定位
         methods.makeListAndSetLocation.call(this);
 
         // 事件綁定
-        $(this).keydown(function(e) {
-          if(e.which === 40 || e.which === 38 || e.which === 13) e.preventDefault();
-        });
-        $(this).keyup( methods.handleKeyup );
-        $(this).focus( function() {
-          var box = $(this).siblings('.suggest-box');
-
-          if(box.find('.suggest-list').children().length > 0)  box.show();
-        });
-
-        $(this).blur( function() {
-          $(this).siblings('.suggest-box').delay().stop().fadeOut(150);
-        });
-
-      });
+        $(this)
+          .on('focus keyup', methods.handleKeyup)
+          .on('keydown', function(e) {
+            if(e.which === 40 || e.which === 38 || e.which === 13) e.preventDefault();
+          })
+          .on('blur', function() {
+            $(this).siblings('.suggest-box').delay().stop().fadeOut(150);
+          });
     },
 
     makeListAndSetLocation: function() {
@@ -127,15 +120,9 @@
           configs = inputDom.data('verySuggester'),
           inputValue = inputDom.val(),
           box = inputDom.siblings('.suggest-box'),
+          arrow = box.find('.suggest-arrow'),
+          list = box.find('.suggest-list'),
           listItem = [];
-
-      // 擋掉沒有必要產生清單的狀況
-      if( inputDom.val().indexOf(configs.searchSymbol) === -1 ||
-          inputDom.val().slice(0, $(this).val().indexOf(configs.searchSymbol)) === ''
-        ) {
-          box.hide().find('.suggest-list').html('');
-          return;
-      }
 
       // 方向鍵移動focus項目
       if(event.which === 38 || event.which === 40) { // ↑ ↓
@@ -147,14 +134,22 @@
         return;
       }
 
-      var firstPart = inputValue.slice( inputValue.indexOf(configs.searchSymbol) );
-      var secondPart = inputValue.slice( 0, inputValue.indexOf(configs.searchSymbol) );
+      // 擋掉沒有必要產生清單的狀況
+      if (inputDom.val().indexOf(configs.searchSymbol) === -1 ||
+          inputDom.val().slice(0, $(this).val().indexOf(configs.searchSymbol)) === '') {
+        box.hide().find('.suggest-list').html('');
+        return;
+      }
+
+      // 組清單
+      var mailPart = inputValue.slice( inputValue.indexOf(configs.searchSymbol) );
+      var accountPart = inputValue.slice( 0, inputValue.indexOf(configs.searchSymbol) );
 
       for(var i = 0; i < configs.searchList.length; i++) {
-        if( configs.searchList[i].indexOf( firstPart ) !== -1 ) {
+        if( configs.searchList[i].indexOf( mailPart ) !== -1 ) {
           listItem.push(
             '<div class="suggest-item" data-idx="' + listItem.length + '">' +
-              '<span class="suggest-retain">' + secondPart + '</span>' +
+              '<span class="suggest-retain">' + accountPart + '</span>' +
               '<span class="suggest-domain">' + configs.searchList[i] + '</span>' +
             '</div>'
           );
@@ -162,62 +157,59 @@
       }
 
       if(listItem.length > 0) {
-        var list = box.find('.suggest-list'),
-            arrow = box.find('.suggest-arrow'),
-            max = 0;
+        var max = 0;
 
         list
           .html( listItem.join('') )
-          .find('.suggest-domain')
-            .each(function(idx, item) { if($(item).width() > max)  max = $(item).width(); })
-            .siblings('.suggest-retain')
-              .css('max-width', 'calc(100% - ' + (max+2) + 'px)');
+          .promise().done(function() {
+            // item當前效果
+            list.children()
+              .hover(function() {
+                $(this).addClass('cur').siblings().removeClass('cur');
+                methods.updateChosenStyle(list, configs);
+              }, function() {
+                list.children().removeClass('cur');
+                methods.updateChosenStyle(list, configs);
+              })
+              .click(function() {
+                methods.selectItem($(this), inputDom);
+              });
 
-        // 事件
-        list.children().hover(function() {
-          $(this).addClass('cur').siblings().removeClass('cur');
-          methods.updateChosenStyle(list, configs);
-        }, function() {
-          $(this).siblings().add($(this)).removeClass('cur');
-          methods.updateChosenStyle(list, configs);
-        });
+            box.show()
+              .find('.suggest-domain')
+              .each(function(idx, item) { if($(item).outerWidth() > max)  max = $(item).outerWidth();})
+              .end().find('.suggest-retain')
+                .css('max-width', list.find('.suggest-item').width() - max - 10);
 
-        box
-          .find('.suggest-item')
-            .click(function() {
-              methods.selectItem($(this), inputDom);
-            })
-          .end().show();
-
-        if(configs.limitItem !== 0) {
-          list.css({
-            'max-height': (list.children().outerHeight() * configs.limitItem) + 3,
-            'overflow-y': 'auto'
+            // 設定清單最大高度
+            if(configs.limitItem !== 0 && listItem.length > configs.limitItem) {
+              list.css({
+                'max-height': (list.children().outerHeight() * configs.limitItem) + 3,
+                'overflow-y': 'auto'
+              });
+            }
           });
-        }
-
       } else {
         box.hide().find('.suggest-list').html('');
+        list.css('max-height', 'auto').html('');
+        if(configs.limitItem !== 0) {
+          list.scrollTop(0);
+        }
       }
     },
 
     moveThroughItem: function( key, list ) {
       var configs = $(this).data('verySuggester'),
-          curItem = list.children('.cur').data('idx'),
+          curIdx = list.children('.cur').data('idx'),
           resultIdx = 0;
-
-      if(key === 40) {
-        resultIdx = (curItem || curItem == 0) ? curItem + 1 : 0;
-      } else if (key === 38) {
-        resultIdx = (curItem) ? curItem - 1 : list.children().length-1;
-      }
 
       switch (key) {
         case 40:
-          resultIdx = (curItem || curItem == 0) ? curItem + 1 : 0;
+          resultIdx = (curIdx || curIdx == 0) ? curIdx + 1 : 0;
+          if(curIdx === list.children().length - 1)  resultIdx = 0;
           break;
         case 38:
-          resultIdx = (curItem) ? curItem - 1 : list.children().length-1;
+          resultIdx = (curIdx) ? curIdx - 1 : list.children().length-1;
           break;
         default:
           break;
@@ -238,25 +230,34 @@
     },
 
     updateChosenStyle: function(_list, configs) {
-      _list
-        .children()
-          .prop('style', '')
-        .filter('.cur')
-          .css({
-            'background': configs.themeColor,
-            'color'     : configs.fontColor
-          });
+      var curItem = _list.find('.cur');
+
+      _list.children().prop('style', '')
+      curItem
+        .css({
+          'background': configs.themeColor,
+          'color'     : configs.fontColor
+        });
+
+      if(configs.limitItem !== 0) {
+        var distance = curItem.index() * _list.children().outerHeight();
+
+        if(curItem.index() === 0) distance = 0;
+        _list.scrollTop(distance);
+      }
     }
   };
 
   $.fn.verySuggester = function( method ) {
+    return this.each(function() {
       if( methods[method] ) {
-        return methods[ method ].apply( this, Array.prototype.slice.call(arguments, 1) );
+        methods[ method ].apply( this, Array.prototype.slice.call(arguments, 1) );
       } else if( !method || typeof method === 'object' ) {
-        return methods.init.call( this, method );
+        methods.init.call( this, method );
       } else {
         $.error('Method ' + method + ' does not exist on jQuery.tooltip');
       }
+    });
   };
 
 })(jQuery);
