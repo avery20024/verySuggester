@@ -37,9 +37,6 @@
     box-sizing: border-box;
     padding: 2px 10px;
     line-height: 26px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
     cursor: pointer;
 }
 .suggest-retain,
