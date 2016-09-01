@@ -6,11 +6,12 @@
  * Copyright (c) 2016 Avery Wu
  * Released under the MIT license
  *
- * Last Modified: 2016-08-24
+ * Last Modified: 2016-09-01
  */
 
 
 (function($) {
+  'use strict';
 
   var methods = {
     init: function(customConfig) {
@@ -41,7 +42,11 @@
             if(e.which === 40 || e.which === 38 || e.which === 13) e.preventDefault();
           })
           .on('blur', function() {
-            $(this).siblings('.suggest-box').delay().stop().fadeOut(150);
+            setTimeout(function() {
+              if (!$(this).is(':focus')) {
+                $(this).siblings('.suggest-box').stop().fadeOut(150);
+              }
+            }, 1500);
           });
     },
 
